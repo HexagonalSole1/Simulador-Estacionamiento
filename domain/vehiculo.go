@@ -1,17 +1,22 @@
 package domain
 
 import (
+	"math/rand"
 	"time"
 )
 
 type Vehiculo struct {
 	ID        int
-	Duracion  time.Duration // Tiempo que estará estacionado
-	PosicionX float32       // Posición X del vehículo en la interfaz
-	PosicionY float32       // Posición Y del vehículo en la interfaz
+	Duracion  time.Duration
+	PosicionX float32
+	PosicionY float32
 }
 
-func (v *Vehiculo) Mover(posX, posY float32) {
-	v.PosicionX = posX
-	v.PosicionY = posY
+func NewVehiculo(id int) *Vehiculo {
+	return &Vehiculo{
+		ID:       id,
+		Duracion: time.Duration(rand.Intn(3)+3) * time.Second,
+		PosicionX: 50,
+		PosicionY: 550,
+	}
 }
