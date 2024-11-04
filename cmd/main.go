@@ -1,16 +1,17 @@
-// cmd/main.go
 package main
 
 import (
 	"main/application"
-	"main/domain"
 	"main/infrastructure"
 )
 
 func main() {
-	estacionamiento := domain.NuevoEstacionamiento(20)
-	servicio := application.ServicioEstacionamiento{Estacionamiento: estacionamiento}
-	go servicio.NuevaSimulacion(0) // Inicia la simulación con 100 vehículos
+	// Inicializar el servicio de estacionamiento
+	servicio := application.NewServicioEstacionamiento(5)
 
-	infrastructure.IniciarGUI(&servicio) // Inicia la interfaz gráfica
+	// Inicia la lógica de simulación en paralelo (100 vehículos)
+	go servicio.NuevaSimulacion(0)
+
+	// Iniciar la interfaz gráfica
+	infrastructure.IniciarGUI(servicio)
 }

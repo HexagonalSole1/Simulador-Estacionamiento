@@ -58,7 +58,7 @@ func (e *Estacionamiento) Salir(cajon int) {
 		// Bloquea el cajón temporalmente por 5 segundos para simular tiempo de salida
 		e.Bloqueados[cajon] = true
 		go func() {
-			time.Sleep(1* time.Second)
+			time.Sleep(1* time.Microsecond)
 			e.Mu.Lock()
 			defer e.Mu.Unlock()
 			e.Bloqueados[cajon] = false // Desbloquea el cajón después de 5 segundos

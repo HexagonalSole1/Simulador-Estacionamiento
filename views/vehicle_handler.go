@@ -13,12 +13,9 @@ import (
 
 // LaunchVehicles lanza los vehículos en la simulación
 func LaunchVehicles(servicio *application.ServicioEstacionamiento, vehicleContainer *fyne.Container, cajones []*canvas.Rectangle, cajonMutexes []sync.Mutex) {
-	var wg sync.WaitGroup
 	for i := 0; i < 100; i++ {
-		wg.Add(1) // Añade una tarea al grupo de espera
 		go func(id int) {
-			defer wg.Done() // Marca la tarea como completada cuando la goroutine termina
-
+			// Crear y configurar el vehículo
 			canvasCar := canvas.NewRectangle(color.RGBA{0, 128, 255, 255}) // Carrito azul
 			canvasCar.SetMinSize(fyne.NewSize(50, 50))
 			vehicleContainer.Add(canvasCar)
@@ -27,12 +24,11 @@ func LaunchVehicles(servicio *application.ServicioEstacionamiento, vehicleContai
 			moveVehicleToSlot(servicio, vehiculo, canvasCar, cajones, cajonMutexes, vehicleContainer)
 		}(i)
 	}
-
-	// Espera a que todas las goroutines de vehículos terminen antes de continuar
-	wg.Wait()
 }
 
 func moveVehicleToSlot(servicio *application.ServicioEstacionamiento, vehiculo *domain.Vehiculo, canvasCar *canvas.Rectangle, cajones []*canvas.Rectangle, cajonMutexes []sync.Mutex, vehicleContainer *fyne.Container) {
+	initialPosX, initialPosY := vehiculo.PosicionX, vehiculo.PosicionY
+
 	for {
 		destCajon := servicio.Estacionamiento.Entrar()
 		if destCajon != -1 {
@@ -41,19 +37,21 @@ func moveVehicleToSlot(servicio *application.ServicioEstacionamiento, vehiculo *
 				defer cajonMutexes[cajon].Unlock()
 				animateMovementToSlot(vehiculo, canvasCar, cajones[cajon], cajon)
 				time.Sleep(vehiculo.Duracion)
+
+				// Libera el cajón después del tiempo de permanencia
 				servicio.Estacionamiento.Salir(cajon)
 				cajones[cajon].FillColor = color.RGBA{200, 200, 200, 255}
 				cajones[cajon].Refresh()
-				go animateMovementToExit(vehiculo, canvasCar, vehicleContainer)
+
+				// Mover el vehículo de regreso a su posición inicial
+				animateMovementToExit(vehiculo, canvasCar, vehicleContainer, initialPosX, initialPosY)
 			}(destCajon)
 			break
 		} else {
-			time.Sleep(1 * time.Second)
+			time.Sleep(1 * time.Second) // Espera antes de reintentar
 		}
 	}
 }
-
-// Funciones de animación...
 
 func animateMovementToSlot(vehiculo *domain.Vehiculo, canvasCar *canvas.Rectangle, cajon *canvas.Rectangle, cajonID int) {
 	destX := float32((cajonID % 5) * 100 + 25)
@@ -64,8 +62,12 @@ func animateMovementToSlot(vehiculo *domain.Vehiculo, canvasCar *canvas.Rectangl
 		dy := destY - vehiculo.PosicionY
 		distance := float32(math.Sqrt(float64(dx*dx + dy*dy)))
 		if distance < 2 {
+			vehiculo.PosicionX = destX
+			vehiculo.PosicionY = destY
 			break
 		}
+
+		// Movimiento gradual
 		vehiculo.PosicionX += 2 * (dx / distance)
 		vehiculo.PosicionY += 2 * (dy / distance)
 		canvasCar.Move(fyne.NewPos(vehiculo.PosicionX, vehiculo.PosicionY))
@@ -74,16 +76,15 @@ func animateMovementToSlot(vehiculo *domain.Vehiculo, canvasCar *canvas.Rectangl
 	}
 }
 
-func animateMovementToExit(vehiculo *domain.Vehiculo, canvasCar *canvas.Rectangle, vehicleContainer *fyne.Container) {
-	initialPosX, initialPosY := float32(50), float32(550)
-
+func animateMovementToExit(vehiculo *domain.Vehiculo, canvasCar *canvas.Rectangle, vehicleContainer *fyne.Container, initialPosX, initialPosY float32) {
 	for {
 		dx := initialPosX - vehiculo.PosicionX
 		dy := initialPosY - vehiculo.PosicionY
 		distance := float32(math.Sqrt(float64(dx*dx + dy*dy)))
 
 		if distance < 2 {
-			// Si el vehículo está cerca de la posición inicial, detener el movimiento
+			vehiculo.PosicionX = initialPosX
+			vehiculo.PosicionY = initialPosY
 			break
 		}
 
@@ -94,6 +95,6 @@ func animateMovementToExit(vehiculo *domain.Vehiculo, canvasCar *canvas.Rectangl
 		time.Sleep(10 * time.Millisecond)
 	}
 
-	// Eliminar el vehículo de la interfaz cuando se va
+	// Remueve el vehículo una vez que llega a su posición inicial
 	vehicleContainer.Remove(canvasCar)
 }
